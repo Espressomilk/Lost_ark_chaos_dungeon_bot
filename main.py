@@ -10,6 +10,7 @@ class Lost_bot():
 
     # propeties
     wincapture = WindowCapture("LOST ARK (64-bit, DX11) v.2.3.4.1")
+    wincapture.focus_window()
     translate_pos = wincapture.get_screen_position
     global screenshot
     screenshot = wincapture.get_screenshot()
@@ -133,7 +134,10 @@ class Lost_bot():
             self.waitRandomizedTime(hold_time*0.8,hold_time)
             pyautogui.keyUp(cast)
             self.available_spells.remove(cast)
-            self.waitRandomizedTime(0.2,1)
+            if cast == 'r' or cast == 'f':
+                self.waitRandomizedTime(1.3, 1.5)
+            else:
+                self.waitRandomizedTime(0.2,1)
 
     ## exit from dungeon if finish
     def exit(self, song_of_escape):
