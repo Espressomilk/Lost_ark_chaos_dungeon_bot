@@ -20,6 +20,7 @@ def configure_config():
     print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
     print("!!!! IMPORTANT !!!!")
     print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
+    print("Resolution needs to be 16:9.")
     print("You must stay in place where spells are available to configure everything correctly! (You can't be in big city, spells can't be on cooldown, anything can't cover up spells etc.)")
     print("If you are berserker with mayhem and you want use 'Z' as regular spell, turn on mayhem and then configure.")
     print("Let me know on GitHub if you have any problems or you have some ideas how to improve him :)")
@@ -38,11 +39,11 @@ def configure_config():
     line3 = "song of escape: " + song_of_escape
     line4 = "repair: " + repair
     f.write(line1 + "\n" + "spell/time(s): "+ line2 + "\n" + line3 + "\n" + line4)
-    WindowCapture("LOST ARK (64-bit, DX11) v.2.1.1.4").focus_window()
+    WindowCapture("LOST ARK (64-bit, DX11) v.2.3.4.1").focus_window()
 
     for spell in spells_input:
         print(spell)
-        screenshot = WindowCapture("LOST ARK (64-bit, DX11) v.2.1.1.4").get_screenshot()
+        screenshot = WindowCapture("LOST ARK (64-bit, DX11) v.2.3.4.1").get_screenshot()
         pos = spells_regions[0][spell]
         screenshot = screenshot[pos[1]:pos[3], pos[0]:pos[2]]
         cv2.imwrite(("images\\" + spell + ".png"), screenshot)

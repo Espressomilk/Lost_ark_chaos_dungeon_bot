@@ -1,4 +1,5 @@
 import pyautogui, time, random, cv2, math, keyboard, os, numpy as np
+import time
 from random import randint
 from threading import Thread
 from window_capture import WindowCapture
@@ -8,7 +9,7 @@ from config import configure_config
 class Lost_bot():
 
     # propeties
-    wincapture = WindowCapture("LOST ARK (64-bit, DX11) v.2.1.1.4")
+    wincapture = WindowCapture("LOST ARK (64-bit, DX11) v.2.3.4.1")
     translate_pos = wincapture.get_screen_position
     global screenshot
     screenshot = wincapture.get_screenshot()
@@ -16,6 +17,8 @@ class Lost_bot():
     MOVE = False
     CAST = False
     BOT_WORKING = False
+    SHOULD_EXIT = False
+    TIMEOUT = 600  # seconds.
     available_spells = []
     window_size = (wincapture.w, wincapture.h)
     print(wincapture)
@@ -36,11 +39,16 @@ class Lost_bot():
     # portal_path = "portal2.png"
     spell_check = "images\\spell_check.png"
     result_path = "images\\result.png"
-    matchmaking_path = "images\\matchmaking.png"
+    solo_path = "images\\solo.jpg"
+    shortcut_path = "images\\shortcut.jpg"
     ok2_button_path = "images\\ok.png"
     resurection_path = "images\\base_res.png"
     check_in_fight_path = "images\\check_in_fight.jpg"
-    accept_path = "images\\ccept.jpg"
+    accept_path = "images\\accept.jpg"
+    in_game_icon_path = "images\\in_game_icon.jpg"
+    portal_path = "images\\portal.jpg"
+
+    not_in_game_count = 0
 
 
 
@@ -59,6 +67,7 @@ class Lost_bot():
             song_of_escape = row[-1:]
         elif "repair" in row:
             repair = row.replace("repair:","").replace(" ","").lower()
+    
     def focus_game_window(self):
         self.Lost_ark.minimize()
         self.Lost_ark.restore()
@@ -85,92 +94,26 @@ class Lost_bot():
         else:
             return False
 
-    ## repair items if possible
-    def repair_items(self):
-        cropped_screen = screenshot[0:107,1430:1520]
-        mask = cv2.imread("images\\mask.png", cv2.IMREAD_GRAYSCALE)
-        mask = cv2.threshold(mask,0,255,cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)[1]
-        equipment = cv2.imread("images\\equipment.png", cv2.IMREAD_UNCHANGED)
-        mask_x = cv2.bitwise_and(cropped_screen,cropped_screen,mask = mask)
-        mask_y = cv2.bitwise_and(equipment,equipment,mask = mask)
-        result = cv2.matchTemplate(mask_x , mask_y, self.method)
-        _,max_val,_,_ = cv2.minMaxLoc(result)
-        if max_val > 0.93:
-            print("Repair start")
-            pyautogui.hotkey("alt", "p")
-            self.waitRandomizedTime(1,2)
-            pos_repair = self.find_pos("images\\repair.png",0.98,self.method)
-            pyautogui.moveTo(pos_repair[0] + randint(3,6), pos_repair[1] + randint(3,6))
-            pyautogui.click()
-            self.waitRandomizedTime(1,2)
-            pos_repair = self.find_pos("images\\repair_button.png",0.98,self.method)
-            pyautogui.moveTo(pos_repair[0] + randint(3,6), pos_repair[1] + randint(3,6))
-            pyautogui.click()
-            self.waitRandomizedTime(1,2)
-            pyautogui.press("esc", 2, 2)
-
-        ## first take screen of minimap and try to clear it, after that find target, calculate and follow him
-    def find_pos_and_walk(self, minimap_path, target, method, game_window):
-        im = screenshot
-        cropped_image = im[40:295, 1593:1889]
-        cv2.imwrite(minimap_path, cropped_image)
-        im = cropped_image
-        im_gray = cv2.imread(minimap_path, cv2.IMREAD_GRAYSCALE)
-
-        ## clear a little our minimap to avoid some wrong matches
-        thresh = cv2.threshold(im_gray,0,255,cv2.THRESH_BINARY + cv2.THRESH_OTSU)[1]
-        kernel = np.ones((12,12),np.uint8)
-        closing = cv2.morphologyEx(thresh, cv2.MORPH_CLOSE, kernel)
-        kernel = np.ones((15,15),np.uint8)
-        closing = cv2.morphologyEx(closing, cv2.MORPH_OPEN, kernel)
-        
-        ## use our mask to minimap
-        res = cv2.bitwise_and(im,im,mask = closing)
-        friend = cv2.imread(target)
-
-        ## resize to get vector
-        im = cv2.resize(res, None, fx = 4, fy = 3)
-        result = cv2.matchTemplate(im, friend, method)
-        _,max_val,_, max_loc = cv2.minMaxLoc(result)
-        _,map_w,map_h = im.shape[::-1]
-        _,friend_w,friend_h = friend.shape[::-1]
-
-        ## count distance how far we have to move our screenshot to place it on middle of screen
-        distance_x = (game_window[0] - map_w) / 2
-        distance_y = (game_window[1] - map_h) / 2
-        
-        ## count where is my character and friend character to get distance between them. If it is too big, just run to friend, dont cast spells. Also multiply 
-        ## values to get further posx posy
-        friend_position = (max_loc[0] + distance_x, max_loc[1] + distance_y)
-        multiplier = 1
-        friend_position_on_minimap = (max_loc[0] + (friend_w / 2),max_loc[1] + (friend_h / 2))
-        my_position_on_minimap = (int((map_w / 2)), int((map_h) / 2))
-        dist = math.dist(my_position_on_minimap,friend_position_on_minimap)
-        if dist < 180:
-            multiplier = 1.2
-        if friend_position[0] < (game_window[0] / 2):
-            posx = friend_position[0] * (2 - multiplier)
-        else:
-            posx = friend_position[0] * multiplier
-        if friend_position[1] < (game_window[1] / 2):
-            posy = friend_position[1] * (2 - multiplier)
-        else:
-            posy = friend_position[1] * multiplier
-        if max_val > 0.98:
-            self.wincapture.get_screen_position((posx,posy))
-            return True, posx, posy
-        else:
-            return False, 0, 0
-
-    def fight(self, target): ## start thread with moving to someone
+    def scan_for_portal(self):
         while not self.IN_CITY:
-            pos = self.find_pos_and_walk(self.minimap_path, target, self.method, self.window_size)
-            if pos[0] == True:
-                pyautogui.moveTo(pos[1], pos[2])
-                pyautogui.click(button= "SECONDARY", clicks = randint(1,3), interval = random.uniform(0.1,0.3))
+            pos = self.find_pos(self.portal_path, 0.90, cv2.TM_CCORR_NORMED)
+            if pos:
+                print(pos)
+                print("Portal appeared!")
+                self.SHOULD_EXIT = True
+                break
+
+    def pos_dirs(self, index):
+        x = [959, 960, 1034, 1049, 1024, 953, 886, 862, 884]
+        y = [528, 419, 469, 516, 585, 581, 561, 512, 444]
+        return self.wincapture.get_screen_position((x[index], y[index]))
+
+    def pos_center(self):
+        return self.wincapture.get_screen_position((959, 528))
 
     def cast_spell(self, spells):  ##check spells and cast first avalible
         hold_time = 0.2
+        print(self.available_spells)
         if self.available_spells == []:
             self.available_spells = self.check_available_spell(spells)
             for _ in range(0,randint(5,8)):
@@ -178,15 +121,19 @@ class Lost_bot():
                 self.waitRandomizedTime(0.2,0.3)
         else: 
             cast = self.available_spells[randint(0,len(self.available_spells)-1)]
-            for i in self.duration:
-                if cast in i:
-                    hold_time = float(i.replace(cast, "").replace(",","."))
         
+            random_pos = self.pos_dirs(randint(0, 8))
+            pyautogui.moveTo(random_pos[0] + randint(-5, 5), random_pos[1] + randint(-5, 5))
+
+            pyautogui.keyDown(cast)
+            self.waitRandomizedTime(hold_time*0.8,hold_time)
+            pyautogui.keyUp(cast)
+            # Double click.
             pyautogui.keyDown(cast)
             self.waitRandomizedTime(hold_time*0.8,hold_time)
             pyautogui.keyUp(cast)
             self.available_spells.remove(cast)
-            self.waitRandomizedTime(2,3)
+            self.waitRandomizedTime(0.2,1)
 
     ## exit from dungeon if finish
     def exit(self, song_of_escape):
@@ -208,9 +155,12 @@ class Lost_bot():
                 pyautogui.moveTo(x[0] + randint(5,25), x[1 + randint(5, 10)])
                 self.waitRandomizedTime(1,2)
                 pyautogui.click()
-                self.z = 0
             except:
                 pass
+
+    def is_in_game(self):
+        icon = self.find_pos(self.in_game_icon_path, 0.99, cv2.TM_CCORR_NORMED)
+        return icon
 
     def check_in_fight(self):  ##check if character is in city
         if self.find_pos(self.check_in_fight_path, 0.9, cv2.TM_CCORR_NORMED) != False:
@@ -220,46 +170,100 @@ class Lost_bot():
             return True
 
     def check_accept(self):
-        accept_pos = self.find_pos(self.accept_path, 0.945, cv2.TM_CCOEFF_NORMED)
-        if accept_pos != False:
-            pyautogui.moveTo(accept_pos[0] + randint(5,15), accept_pos[1] + randint(3,15))
-            pyautogui.click()
+        accept_pos = self.accept_range()  
+        pyautogui.moveTo(accept_pos[0], accept_pos[1], random.uniform(0.1, 0.5))
+        pyautogui.click()
 
-    ## search for chaos dungeon when in city
-    def search_chaos(self):
+    def check_ok(self):
+        ok_pos = self.ok_range()
+        pyautogui.moveTo(ok_pos[0], ok_pos[1], random.uniform(0.1, 0.5))
+        pyautogui.click()
+
+    def ok_range(self):
+        loc = [randint(865, 949), randint(596, 612)]
+        return self.wincapture.get_screen_position(loc)
+
+    def shortcut_range(self):
+        loc = [869 + randint(-40 , 40), 307 + randint(-10, 10)]
+        return self.wincapture.get_screen_position(loc)
+
+    def solo_range(self):
+        loc = [randint(1391, 1650), randint(842, 877)]
+        return self.wincapture.get_screen_position(loc)
+
+    def accept_range(self):
+        loc = [randint(866, 956), randint(598, 627)]
+        return self.wincapture.get_screen_position(loc)
+
+    def exit_range(self):
+        loc = [randint(81, 189), randint(289, 319)]
+        return self.wincapture.get_screen_position(loc)
+
+    def repair_icon_range(self):
+        loc = [randint(1240, 1252), randint(691, 707)]
+        return self.wincapture.get_screen_position(loc)
+
+    def repair_equiped_gear_range(self):
+        loc = [randint(1015, 1155), randint(434, 452)]
+        return self.wincapture.get_screen_position(loc)
+
+    def repair_items(self):
         self.wincapture.focus_window()
-        while self.IN_CITY == True:
-            print("in city: ", self.IN_CITY)
-            self.z = 0
-            if self.IN_CITY == True:
-                self.IN_CITY = self.check_in_fight()
-            if self.repair == "y":
-                self.repair_items()
+        pyautogui.hotkey('alt', 'p')
+        self.waitRandomizedTime(1, 2)
+        repair_icon = self.repair_icon_range()
+        pyautogui.moveTo(repair_icon[0], repair_icon[1], random.uniform(0.1, 0.5))
+        pyautogui.click()
+        self.waitRandomizedTime(1, 2)
+        repair_equiped_gear = self.repair_equiped_gear_range()
+        pyautogui.moveTo(repair_equiped_gear[0], repair_equiped_gear[1], random.uniform(0.1, 0.5))
+        pyautogui.click()
+        self.waitRandomizedTime(1, 2)
+        pyautogui.press("esc")
+        self.waitRandomizedTime(1, 2)
+        pyautogui.press("esc")
 
-            if self.IN_CITY == True:
-                pyautogui.press('g')
-                self.waitRandomizedTime(1,2)
-                matchmaking_pos = self.find_pos(self.matchmaking_path, 0.99, cv2.TM_CCOEFF_NORMED)
-                if matchmaking_pos != False:
-                    pyautogui.moveTo(matchmaking_pos[0] + randint(30,100), matchmaking_pos[1] + randint(3,40))
-                    pyautogui.click()
+    def alt_q_chaos(self):
+        self.wincapture.focus_window()
+        pyautogui.hotkey('alt', 'q')
+        self.waitRandomizedTime(1, 2)
+        chaos_pos = self.shortcut_range()
+        pyautogui.moveTo(chaos_pos[0], chaos_pos[1], random.uniform(0.1, 0.5))
+        pyautogui.click()
+        self.waitRandomizedTime(1, 2)
+        solo_pos = self.solo_range()
+        pyautogui.moveTo(solo_pos[0], solo_pos[1], random.uniform(0.1, 0.5))
+        pyautogui.click()
 
-            self.check_accept()
+        self.check_accept()
+        self.IN_CITY = False
+        self.SHOULD_EXIT = False
 
     ## do chaos dungeon after finding one
     def do_chaos(self):
-        while self.IN_CITY == False:  
-            if self.z == 0:                                
-                pyautogui.press("z")
-                self.z += 1
+        start_time = time.time()
+        while not self.IN_CITY and time.time() - start_time < self.TIMEOUT:
             if not self.MOVE:
                 self.MOVE = True
-                start_moving = Thread(target = self.fight, args = (self.target_path,))
-                start_moving.start()
-            self.cast_spell(self.all_spells)
-            self.check_res()
-            self.check_accept()
-            self.IN_CITY = self.exit( self.song_of_escape)
+                start_scan = Thread(target = self.scan_for_portal)
+                start_scan.start()
+            if self.is_in_game():
+                self.check_res()
+                self.cast_spell(self.all_spells)
+            else:
+                self.not_in_game_count += 1
+                print("Not in game! Perhaps loading..." + str(self.not_in_game_count))
+            if self.SHOULD_EXIT:
+                exit_icon = self.exit_range()
+                pyautogui.moveTo(exit_icon[0], exit_icon[1], random.uniform(0.1, 0.5))
+                pyautogui.click()
+                self.waitRandomizedTime(0.5, 0.8)
+                self.check_ok()
+                self.IN_CITY = True
+                self.waitRandomizedTime(10, 12)
+            # self.check_res()
+            # self.check_accept()
+            # self.IN_CITY = self.exit( self.song_of_escape)
             
 
 def capture_screen():
@@ -277,17 +281,23 @@ def kill_bot():
 
 
 def run_bot():
-    configure = input("Do you want configure bot? Y/N\n").lower()
-    if configure == "y":
-        configure_config()
+    # configure = input("Do you want configure bot? Y/N\n").lower()
+    # if configure == "y":
+    #     configure_config()
     Esc = True
+    count = 10
     while True:
         bot = Lost_bot()
         if Esc:
             Thread(target = kill_bot, args = ()).start()
             Esc = False
-        bot.search_chaos()
+        if count >= 10:
+            count = 0
+            bot.repair_items()
+        bot.waitRandomizedTime(1, 2)
+        bot.alt_q_chaos()
         bot.do_chaos()
+        count += 1
         
 if __name__ == '__main__':
     run_bot()
