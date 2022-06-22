@@ -10,7 +10,6 @@ class Lost_bot():
 
     # propeties
     wincapture = WindowCapture("LOST ARK (64-bit, DX11) v.2.3.4.1")
-    wincapture.focus_window()
     translate_pos = wincapture.get_screen_position
     global screenshot
     screenshot = wincapture.get_screenshot()
@@ -24,58 +23,25 @@ class Lost_bot():
     window_size = (wincapture.w, wincapture.h)
     print(wincapture)
     method = cv2.TM_CCORR_NORMED
-    z = 0
-    global regions
-    regions =   {"region_results" : (238,119,1873,926), 
-                "region_check_in_fight" : (245,0,563,116),
-                "region_check_accept" : (700,410,1260,700),
-                "region_check_ok" : (570,725,1400,1065),
-                "region_minimap" : (1593,40,1889,295),
-                }
-    minimap_path = 'images\\minimap.png'
-    target_path = 'images\\pixel.png'
-    # mini_boss_path = "boss2.png"
-    # final_boss_path = "final_boss2.png"
-    # enemy_path = "enemy.png"
-    # portal_path = "portal2.png"
-    spell_check = "images\\spell_check.png"
-    result_path = "images\\result.png"
-    solo_path = "images\\solo.jpg"
-    shortcut_path = "images\\shortcut.jpg"
-    ok2_button_path = "images\\ok.png"
+
     resurection_path = "images\\base_res.png"
-    check_in_fight_path = "images\\check_in_fight.jpg"
-    accept_path = "images\\accept.jpg"
     in_game_icon_path = "images\\in_game_icon.jpg"
     portal_path = "images\\portal.jpg"
 
     not_in_game_count = 0
 
-
-
-    def waitRandomizedTime(self, min, max):
-        time.sleep(random.uniform(min, max))
-
-    # load config
-    text_file = open("config.txt", "r") ## load config files
+    text_file = open("config.txt", "r")
     lines = text_file.read().split('\n')
     for row in lines:
         if "spells" in row:
             all_spells = row.replace("spells =","").replace(" ","")
         elif "spell/time" in row:
             duration = row[15:].split(" ")
-        elif "song of escape" in row:
-            song_of_escape = row[-1:]
-        elif "repair" in row:
-            repair = row.replace("repair:","").replace(" ","").lower()
-    
-    def focus_game_window(self):
-        self.Lost_ark.minimize()
-        self.Lost_ark.restore()
-        self.Lost_ark.resizeTo(1920,1080)
-        self.Lost_ark.moveTo(0,0)
 
-    def check_available_spell(self, all_spells):  # check region what spells are available
+    def waitRandomizedTime(self, min, max):
+        time.sleep(random.uniform(min, max))
+
+    def check_available_spell(self, all_spells):
         self.available_spells = []
         for spell in all_spells:
             path = ("images\\" + str(spell) + ".png")
@@ -112,7 +78,7 @@ class Lost_bot():
     def pos_center(self):
         return self.wincapture.get_screen_position((959, 528))
 
-    def cast_spell(self, spells):  ##check spells and cast first avalible
+    def cast_spell(self, spells):
         hold_time = 0.2
         print(self.available_spells)
         if self.available_spells == []:
@@ -139,39 +105,15 @@ class Lost_bot():
             else:
                 self.waitRandomizedTime(0.2,1)
 
-    ## exit from dungeon if finish
-    def exit(self, song_of_escape):
-        if self.find_pos(self.result_path, 0.95, cv2.TM_CCORR_NORMED) != False:
-            while True:
-                time.sleep(randint(2,3))
-                pyautogui.press(song_of_escape)
-                time.sleep(randint(8,10))
-                if self.find_pos(self.ok2_button_path, 0.99, cv2.TM_CCORR_NORMED) == False:
-                    self.MOVE = False
-                    return True
-        else:
-            return False
-            
-    def check_res(self): ## check if character is dead
+    def check_resurection(self):
         x = self.find_pos(self.resurection_path, 0.98, cv2.TM_CCORR_NORMED)
         if x != False:
-            try:
-                pyautogui.moveTo(x[0] + randint(5,25), x[1 + randint(5, 10)])
-                self.waitRandomizedTime(1,2)
-                pyautogui.click()
-            except:
-                pass
+            pyautogui.moveTo(x[0] + randint(5,25), x[1 + randint(5, 10)], random.uniform(0.2, 0.8))
+            pyautogui.click()
 
     def is_in_game(self):
         icon = self.find_pos(self.in_game_icon_path, 0.99, cv2.TM_CCORR_NORMED)
         return icon
-
-    def check_in_fight(self):  ##check if character is in city
-        if self.find_pos(self.check_in_fight_path, 0.9, cv2.TM_CCORR_NORMED) != False:
-            self.MOVE = False
-            return False
-        else:
-            return True
 
     def check_accept(self):
         accept_pos = self.accept_range()  
@@ -211,17 +153,17 @@ class Lost_bot():
         loc = [randint(1015, 1155), randint(434, 452)]
         return self.wincapture.get_screen_position(loc)
 
+    def moveToClick(loc):
+        pyautogui.moveTo(loc[0], loc[1], random.uniform(0.1, 0.5))
+        pyautogui.click()
+
     def repair_items(self):
         self.wincapture.focus_window()
         pyautogui.hotkey('alt', 'p')
         self.waitRandomizedTime(1, 2)
-        repair_icon = self.repair_icon_range()
-        pyautogui.moveTo(repair_icon[0], repair_icon[1], random.uniform(0.1, 0.5))
-        pyautogui.click()
+        self.moveToClick(self.repair_icon_range())
         self.waitRandomizedTime(1, 2)
-        repair_equiped_gear = self.repair_equiped_gear_range()
-        pyautogui.moveTo(repair_equiped_gear[0], repair_equiped_gear[1], random.uniform(0.1, 0.5))
-        pyautogui.click()
+        self.moveToClick(self.repair_equiped_gear_range())
         self.waitRandomizedTime(1, 2)
         pyautogui.press("esc")
         self.waitRandomizedTime(1, 2)
@@ -231,17 +173,20 @@ class Lost_bot():
         self.wincapture.focus_window()
         pyautogui.hotkey('alt', 'q')
         self.waitRandomizedTime(1, 2)
-        chaos_pos = self.shortcut_range()
-        pyautogui.moveTo(chaos_pos[0], chaos_pos[1], random.uniform(0.1, 0.5))
-        pyautogui.click()
+        self.moveToClick(self.shortcut_range())
         self.waitRandomizedTime(1, 2)
-        solo_pos = self.solo_range()
-        pyautogui.moveTo(solo_pos[0], solo_pos[1], random.uniform(0.1, 0.5))
-        pyautogui.click()
+        self.moveToClick(self.solo_range())
 
         self.check_accept()
         self.IN_CITY = False
         self.SHOULD_EXIT = False
+
+    def exit_chaos(self):
+        self.moveToClick(self.exit_range())
+        self.waitRandomizedTime(0.5, 0.8)
+        self.check_ok()
+        self.IN_CITY = True
+        self.waitRandomizedTime(10, 12)
 
     ## do chaos dungeon after finding one
     def do_chaos(self):
@@ -252,22 +197,13 @@ class Lost_bot():
                 start_scan = Thread(target = self.scan_for_portal)
                 start_scan.start()
             if self.is_in_game():
-                self.check_res()
+                self.check_resurection()
                 self.cast_spell(self.all_spells)
             else:
                 self.not_in_game_count += 1
                 print("Not in game! Perhaps loading..." + str(self.not_in_game_count))
             if self.SHOULD_EXIT:
-                exit_icon = self.exit_range()
-                pyautogui.moveTo(exit_icon[0], exit_icon[1], random.uniform(0.1, 0.5))
-                pyautogui.click()
-                self.waitRandomizedTime(0.5, 0.8)
-                self.check_ok()
-                self.IN_CITY = True
-                self.waitRandomizedTime(10, 12)
-            # self.check_res()
-            # self.check_accept()
-            # self.IN_CITY = self.exit( self.song_of_escape)
+                self.exit_chaos()
             
 
 def capture_screen():
@@ -288,9 +224,11 @@ def run_bot():
     # configure = input("Do you want configure bot? Y/N\n").lower()
     # if configure == "y":
     #     configure_config()
+    total_time = int(input("How long do you want to run? (minutes)"))
+    start_time = time.time()
     Esc = True
     count = 10
-    while True:
+    while True and (time.time() - start_time) / 60 < total_time:
         bot = Lost_bot()
         if Esc:
             Thread(target = kill_bot, args = ()).start()
@@ -300,6 +238,7 @@ def run_bot():
             bot.repair_items()
         bot.waitRandomizedTime(1, 2)
         bot.alt_q_chaos()
+        bot.waitRandomizedTime(5, 8)
         bot.do_chaos()
         count += 1
         

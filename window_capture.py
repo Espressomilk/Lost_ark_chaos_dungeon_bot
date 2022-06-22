@@ -19,6 +19,7 @@ class WindowCapture:
         if not self.hwnd:
             raise Exception('Window not found: {}'.format(window_name))
 
+        win32gui.MoveWindow(self.hwnd, 0, 0, 1920, 1080, True)
         # get the window size
         window_rect = win32gui.GetWindowRect(self.hwnd)
         self.w = window_rect[2] - window_rect[0]
