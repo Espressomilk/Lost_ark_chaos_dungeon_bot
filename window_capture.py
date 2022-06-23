@@ -13,7 +13,11 @@ class WindowCapture:
     offset_y = 0
 
     # constructor
-    def __init__(self, window_name):
+    def __init__(self, window_name, unit_test=False):
+        if unit_test:
+            self.offset_x = 0
+            self.offset_y = 0
+            return
         # find the handle for the window we want to capture
         self.hwnd = win32gui.FindWindow(None, window_name)
         if not self.hwnd:
