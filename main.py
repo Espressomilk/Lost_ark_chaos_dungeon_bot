@@ -20,7 +20,7 @@ class Lost_bot():
 
     IN_CITY = True
     MOVE = False
-    TIMEOUT = 250  # seconds.
+    TIMEOUT = 300  # seconds.
     available_spells = []
 
     RUN_COUNT = 0
@@ -35,8 +35,9 @@ class Lost_bot():
     minimap_self_east_path = "images\\minimap_self_east.jpg"
     minimap_self_north_path = "images\\minimap_self_north.jpg"
     minimap_crystal_tower_path = "images\\minimap_crystal_tower.jpg"
-    level_2_path = "images\\level_2.jpg"
     blue_portal_path = "images\\blue_portal.jpg"
+    monster_health_bar_path = "images\\monster_health_bar.jpg"
+
 
     text_file = open("config.txt", "r")
     lines = text_file.read().split('\n')
@@ -52,6 +53,7 @@ class Lost_bot():
         self.not_in_game_count = 0
         self.is_level_2 = False
         self.disable_cast = False
+        self.should_resurrect = False
         if test_screenshot != []:
             global screenshot
             screenshot = test_screenshot
@@ -91,7 +93,6 @@ class Lost_bot():
         absoluteLoc = (maxLoc[0] + self.get_minimap_offset()[1][0] + target.shape[0] // 2, 
                        maxLoc[1] + self.get_minimap_offset()[0][0] + target.shape[1] // 2)
         if maxVal > threshold:
-            print(maxVal, target_path)
             return self.wincapture.get_screen_position(absoluteLoc)
         else:
             return None
@@ -106,12 +107,10 @@ class Lost_bot():
             return None
 
     def calc_distance(self, loc1, loc2):
-        print(loc1, loc2)
         return math.sqrt((loc1[0] - loc2[0]) ** 2 + (loc1[1] - loc2[1]) ** 2)
 
     def get_heading_direction(self, my_loc, target_loc, multifier=3):
         my_real_loc = self.get_center_loc()
-        print(target_loc[0] - my_loc[0], target_loc[1] - my_loc[1])
         return (my_real_loc[0] + (target_loc[0] - my_loc[0]) * multifier,
                 my_real_loc[1] + (target_loc[1] - my_loc[1]) * multifier)
 
@@ -122,14 +121,11 @@ class Lost_bot():
             if portal_pos:
                 print("Portal appeared!")
                 self.should_exit = True
-
-            # blue_portal_pos = self.find_pos(self.blue_portal_path, 0.90, cv2.TM_CCORR_NORMED)
-            # if blue_portal_pos:
-            #     print("Portal in sight!")
-            #     pyautogui.moveTo(blue_portal_pos[0], blue_portal_pos[1], random.uniform(0.1, 0.3))
-            #     pyautogui.click(button='right')
-            #     self.waitRandomizedTime(1, 2)
-            #     self.should_exit = True
+            death_pos = self.find_pos(self.resurrection_path, 0.90, cv2.TM_CCORR_NORMED)
+            if death_pos:
+                print("Character is dead!")
+                self.should_resurrect = True
+            
         print("Portal scanning ends...")
     
     def check_disable_cast(self, self_minimap_pos, target_minimap_pos):
@@ -197,13 +193,17 @@ class Lost_bot():
             cast = self.available_spells[randint(0,len(self.available_spells)-1)]
         
             if not self.target_direction:
-                random_pos = self.pos_dirs(randint(0, 8))
-                pyautogui.moveTo(random_pos[0] + randint(-5, 5), random_pos[1] + randint(-5, 5), random.uniform(0.1, 0.3))
-                if self.is_level_2 and randint(0, 1):
-                    # Wondering more in second floor to avoid stuck.
-                    pyautogui.mouseDown(button='right')
-                    self.waitRandomizedTime(0.5, 1)
-                    pyautogui.mouseUp(button='right')
+                monster_pos = self.locate_monster_by_health_bar()
+                if monster_pos:
+                    pyautogui.moveTo(monster_pos[0], monster_pos[1], random.uniform(0.07, 0.14))
+                else:
+                    random_pos = self.pos_dirs(randint(0, 8))
+                    pyautogui.moveTo(random_pos[0] + randint(-5, 5), random_pos[1] + randint(-5, 5), random.uniform(0.1, 0.3))
+                    if self.is_level_2 and randint(0, 1):
+                        # Wondering more in second floor to avoid stuck.
+                        pyautogui.mouseDown(button='right')
+                        self.waitRandomizedTime(0.5, 1)
+                        pyautogui.mouseUp(button='right')
 
             pyautogui.keyDown(cast)
             self.waitRandomizedTime(0.07, 0.15)
@@ -222,13 +222,6 @@ class Lost_bot():
     def ressurrection_range(self):
         loc = [randint(1266, 1467), randint(428, 466)]
         return self.wincapture.get_screen_position(loc)
-
-    def check_resurrection(self):
-        x = self.find_pos(self.resurrection_path, 0.95, cv2.TM_CCORR_NORMED)
-        if x:
-            print("Resurrecting!")
-            self.moveToClick(self.ressurrection_range())
-            self.RESURRECT_COUNT += 1
 
     def is_in_game(self):
         icon = self.find_pos(self.in_game_icon_path, 0.99, cv2.TM_CCORR_NORMED)
@@ -271,6 +264,18 @@ class Lost_bot():
     def repair_equiped_gear_range(self):
         loc = [randint(1015, 1155), randint(434, 452)]
         return self.wincapture.get_screen_position(loc)
+
+    def locate_monster_by_health_bar(self):
+        monster_loc = self.find_pos(self.monster_health_bar_path, 0.95, cv2.TM_CCORR_NORMED)
+        if monster_loc:
+            self_loc = self.get_center_loc()
+            x_distance = monster_loc[0] - self_loc[0]
+            y_distance = monster_loc[1] - self_loc[1]
+            norm_factor = math.sqrt(x_distance ** 2 + y_distance ** 2)
+            scale_factor = 200
+            aim_loc = (self_loc[0] + int(x_distance / norm_factor * scale_factor), self_loc[1] + int(y_distance / norm_factor * scale_factor))
+            return aim_loc
+        return None
 
     def moveToClick(self, loc):
         pyautogui.moveTo(loc[0], loc[1], random.uniform(0.1, 0.5))
@@ -322,8 +327,8 @@ class Lost_bot():
     def print_state(self, remaining_time):
         print("============================================================================================================")
         print("Remaining seconds: ", remaining_time)
-        print("IN_CITY\tMOVE\texit\tlevel2\tcast\tdirec")
-        print(self.IN_CITY, self.MOVE, self.should_exit, self.is_level_2, self.disable_cast, self.target_direction, sep='\t')
+        print("IN_CITY\tMOVE\texit\tlevel2\tcast\tresurrect\tdirec")
+        print(self.IN_CITY, self.MOVE, self.should_exit, self.is_level_2, self.disable_cast, self.should_resurrect, self.target_direction, sep='\t')
         print("============================================================================================================")
 
     ## do chaos dungeon after finding one
@@ -351,6 +356,11 @@ class Lost_bot():
                         self.exit_chaos()
                     self.should_exit = False
                     continue
+                if self.should_resurrect:
+                    print("Resurrecting!")
+                    self.moveToClick(self.ressurrection_range())
+                    self.should_resurrect = False
+                    self.RESURRECT_COUNT += 1
                 if self.target_direction:
                     print("Heading to ", self.target_direction)
                     self.character_move_to(self.target_direction)
@@ -393,6 +403,7 @@ def run_bot():
     Esc = True
     repair_count = 10  # Start with repairing.
     while True and (time.time() - start_time) / 60 < total_time:
+        print(">>>>>>Total remaining time:", (total_time - (time.time() - start_time) / 60), "minutes<<<<<<")
         bot = Lost_bot()
         if Esc:
             Thread(target = kill_bot, args = ()).start()

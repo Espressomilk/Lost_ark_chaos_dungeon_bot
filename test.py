@@ -10,7 +10,7 @@ from main import Lost_bot
 
 def run_unit_test():
     global screenshot
-    screenshot = cv2.imread("images\\screenshot_test_7.jpg", cv2.IMREAD_UNCHANGED)
+    screenshot = cv2.imread("images\\screenshot_test_6.jpg", cv2.IMREAD_UNCHANGED)
     bot = Lost_bot(screenshot)
 
     my_loc = bot.get_minimap_center()
@@ -36,6 +36,11 @@ def run_unit_test():
     if my_loc and elite_loc:
         elite_real_dir = bot.get_heading_direction(my_loc, elite_loc)
         draw_line(my_real_loc, elite_real_dir)
+
+    monster_loc = bot.locate_monster_by_health_bar()
+    if monster_loc:
+        print("Monster located...")
+        draw_rectangle(monster_loc, (255, 0, 0))
 
     cv2.imshow("Heading!", screenshot)
     cv2.waitKey(0)
