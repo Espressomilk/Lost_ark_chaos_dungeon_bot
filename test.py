@@ -10,12 +10,13 @@ from main import Lost_bot
 
 def run_unit_test():
     global screenshot
-    screenshot = cv2.imread("images\\screenshot_test_6.jpg", cv2.IMREAD_UNCHANGED)
+    screenshot = cv2.imread("images\\screenshot_test_8.jpg", cv2.IMREAD_UNCHANGED)
     bot = Lost_bot(screenshot)
 
     my_loc = bot.get_minimap_center()
     boss_loc = bot.find_on_minimap(Lost_bot.minimap_boss_path, 0.65, cv2.TM_CCOEFF_NORMED)
     elite_loc = bot.find_on_minimap(Lost_bot.minimap_elite_path, 0.65, cv2.TM_CCOEFF_NORMED)
+    foe_loc = bot.find_on_minimap(Lost_bot.minimap_foe_path, 0.65, cv2.TM_CCOEFF_NORMED)
 
     if my_loc:
         print("self found.")
@@ -26,6 +27,9 @@ def run_unit_test():
     if elite_loc:
         print("elite found. Distance:", bot.calc_distance(my_loc, elite_loc))
         draw_rectangle(elite_loc, (0, 0, 255))
+    if foe_loc:
+        print("foe found. Distance", bot.calc_distance(my_loc, foe_loc))
+        draw_rectangle(foe_loc, (0, 0, 255))
 
     print(my_loc, boss_loc, elite_loc)
 

@@ -35,8 +35,10 @@ class Lost_bot():
     minimap_self_east_path = "images\\minimap_self_east.jpg"
     minimap_self_north_path = "images\\minimap_self_north.jpg"
     minimap_crystal_tower_path = "images\\minimap_crystal_tower.jpg"
+    # TODO: Identify insight portal.
     blue_portal_path = "images\\blue_portal.jpg"
     monster_health_bar_path = "images\\monster_health_bar.jpg"
+    minimap_foe_path = "images\\foe.jpg"
 
 
     text_file = open("config.txt", "r")
@@ -109,10 +111,21 @@ class Lost_bot():
     def calc_distance(self, loc1, loc2):
         return math.sqrt((loc1[0] - loc2[0]) ** 2 + (loc1[1] - loc2[1]) ** 2)
 
+    def safe_cast_range(self):
+        return [(379, 280), (1497, 751)]
+
     def get_heading_direction(self, my_loc, target_loc, multifier=3):
-        my_real_loc = self.get_center_loc()
-        return (my_real_loc[0] + (target_loc[0] - my_loc[0]) * multifier,
-                my_real_loc[1] + (target_loc[1] - my_loc[1]) * multifier)
+        # my_real_loc = self.get_center_loc()
+        # target_x = my_real_loc[0] + (target_loc[0] - my_loc[0]) * multifier
+        # target_y = my_real_loc[1] + (target_loc[1] - my_loc[1]) * multifier
+
+        self_loc = self.get_center_loc()
+        x_distance = target_loc[0] - my_loc[0]
+        y_distance = target_loc[1] - my_loc[1]
+        norm_factor = math.sqrt(x_distance ** 2 + y_distance ** 2)
+        scale_factor = 200
+        aim_loc = (self_loc[0] + int(x_distance / norm_factor * scale_factor), self_loc[1] + int(y_distance / norm_factor * scale_factor))
+        return aim_loc
 
     def scan_for_portal(self):
         print("Portal scanning registered...")
@@ -145,6 +158,7 @@ class Lost_bot():
             boss_minimap_pos = self.find_on_minimap(self.minimap_boss_path, 0.68, cv2.TM_CCOEFF_NORMED)
             elite_minimap_pos = self.find_on_minimap(self.minimap_elite_path, 0.68, cv2.TM_CCOEFF_NORMED)
             portal_minimap_pos = self.find_on_minimap(self.minimap_portal_path, 0.68, cv2.TM_CCOEFF_NORMED)
+            foe_minimap_pos = self.find_on_minimap(self.minimap_foe_path, 0.68, cv2.TM_CCOEFF_NORMED)
             self_minimap_pos = self.get_minimap_center()
             crystal_tower_minimap_pos = self.find_on_minimap(self.minimap_crystal_tower_path, 0.68, cv2.TM_CCOEFF_NORMED)
             if crystal_tower_minimap_pos:
@@ -167,6 +181,11 @@ class Lost_bot():
                 self.check_disable_cast(self_minimap_pos, portal_minimap_pos)
                 if self.is_level_2:
                     self.should_exit = True
+            elif foe_minimap_pos:
+                distance = self.calc_distance(foe_minimap_pos, self_minimap_pos)
+                if distance > 80:
+                    print("Only found normal mob on minimap which is far away. Heading...")
+                    self.target_direction = self.get_heading_direction(self_minimap_pos, foe_minimap_pos)
             else:
                 self.target_direction = None
                 self.disable_cast = False
@@ -421,6 +440,8 @@ def run_bot():
         Lost_bot.RUN_COUNT += 1
         bot.waitRandomizedTime(15, 20)
     print("Whole run complete.")
+    print("RUN_COUNT:", Lost_bot.RUN_COUNT)
+    print("RESURRECT_COUNT:", Lost_bot.RESURRECT_COUNT)
     os._exit(1)
 
         
